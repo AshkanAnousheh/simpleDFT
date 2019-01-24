@@ -2,17 +2,19 @@
 #include <vector>
 #include "matplotlibcpp.h"
 #include <complex>
+#include "signal_generator.h"
+
 namespace plt = matplotlibcpp;
 
 class DFT
 {
     using dft_t = std::vector<std::complex<float>>;
     dft_t inp_, out_;
-    size_t N;
+    size_t N, Fs;
     size_t M;
 
 public:
-    DFT( size_t N ) : N( N )
+    DFT( size_t N, size_t fs ) : N( N ), Fs( fs )
     {
         if ( N % 2 )
             M = N / 2;
@@ -22,12 +24,23 @@ public:
         out_.resize( M );
     }
     void load( dft_t& data );
+    void load( std::vector<float>& data );
+    std::vector<float> get_freq_axis();
     DFT& exec();
     std::vector<float> mag();
     std::vector<float> real();
     std::vector<float> imag();
     std::vector<float> phase();
 };
+
+std::vector<float> DFT::get_freq_axis()
+{
+    std::vector<float> f_axis( M );
+    for ( size_t n = 0; n < M; ++n )
+        f_axis[ n ] = n * Fs / N;
+    return f_axis;
+}
+
 void DFT::load( dft_t& data )
 {
     // inp_.clear();
@@ -40,6 +53,20 @@ void DFT::load( dft_t& data )
                 }
         }
 }
+
+void DFT::load( std::vector<float>& data )
+{
+    // inp_.clear();
+    if ( inp_.size() >= data.size() )
+        {
+            for ( size_t i = 0; i < N; ++i )
+                {
+                    inp_[ i ].real( data[ i ] );
+                    inp_[ i ].imag( 0 );
+                }
+        }
+}
+
 DFT& DFT::exec()
 {
     float real_part;
@@ -72,31 +99,30 @@ std::vector<float> DFT::mag()
         }
     return res;
 }
+
 int main()
 {
-    uint32_t fs, n, freq, N, M;
-    N    = 250;
-    freq = 1e3;
+    uint32_t M, N, fs, freq;
     fs   = 10e3;
-    float angle;
-    std::vector<int32_t> f_axis;
-    std::vector<std::complex<float>> inp_signal( N );
+    freq = 1e3;
+    N    = 250;
 
-    for ( size_t n = 0; n < N; n++ )
-        {
-            angle = 2.0f * M_PI * freq * n / fs;
-            inp_signal[ n ].real( std::sin( angle ) );
-        }
+    SignalGenerator<> sin_1k;
+    auto sig1 = sin_1k.sin();
 
-    DFT dft( N );
-    dft.load( inp_signal );
-    auto out = dft.exec().mag();
-    M        = out.size();
-    f_axis.resize( M );
-    for ( size_t n = 0; n < M; ++n )
-        f_axis[ n ] = n * fs / N;
+    SignalGenerator<> sin_2k( 2e3 );
+    auto sig2 = sin_2k.sin();
 
-    plt::plot( f_axis, out );
+    auto sig = sin_1k + sin_2k;
+
+    DFT dft( N, fs );
+    dft.load( sig );
+
+    auto out    = dft.exec().mag();
+    auto f_axis = dft.get_freq_axis();
+
+    plt::stem( f_axis, out );
+    plt::grid( true );
     plt::show();
     return 0;
 }
