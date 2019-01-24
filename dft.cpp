@@ -62,7 +62,7 @@ void DFT::load( std::vector<float>& data )
             for ( size_t i = 0; i < N; ++i )
                 {
                     inp_[ i ].real( data[ i ] );
-                    inp_[ i ].imag( 0 );
+                    inp_[ i ].imag( 0.0f );
                 }
         }
 }
@@ -71,17 +71,22 @@ DFT& DFT::exec()
 {
     float real_part;
     float imag_part;
+    float angle;
     out_.clear();
     for ( size_t m = 0; m < M; m++ )
         {
             real_part = 0.0f;
             imag_part = 0.0f;
+            angle     = 0.0f;
             for ( size_t n = 0; n < N; n++ )
                 {
-                    real_part += ( std::cos( 2.0f * M_PI * n * m / N )
-                                   * inp_[ n ].real() );
-                    imag_part += ( std::sin( 2.0f * M_PI * n * m / N )
-                                   * inp_[ n ].real() );
+                    angle = 2.0f * M_PI * n * m / N;
+                    real_part
+                        += ( std::cos( angle ) * inp_[ n ].real() )
+                        + ( std::sin( angle ) * inp_[ n ].imag() );
+                    imag_part
+                        += ( std::cos( angle ) * inp_[ n ].imag() )
+                        - ( std::sin( angle ) * inp_[ n ].real() );
                 }
             out_[ m ].real( real_part );
             out_[ m ].imag( imag_part );
@@ -91,26 +96,49 @@ DFT& DFT::exec()
 std::vector<float> DFT::mag()
 {
     std::vector<float> res( M );
+
     for ( size_t i = 0; i < M; ++i )
-        {
-            res[ i ]
-                = std::sqrt( out_[ i ].real() * out_[ i ].real()
-                             + out_[ i ].imag() * out_[ i ].imag() );
-        }
+        res[ i ] = std::abs( out_[ i ] );
     return res;
 }
 
+std::vector<float> DFT::phase()
+{
+    std::vector<float> res( M );
+
+    for ( size_t i = 0; i < M; ++i )
+        res[ i ] = std::arg( out_[ i ] ) * 180 / M_PI;
+    return res;
+}
+
+std::vector<float> DFT::real()
+{
+    std::vector<float> res( M );
+
+    for ( size_t i = 0; i < M; ++i )
+        res[ i ] = out_[ i ].real();
+    return res;
+}
+
+std::vector<float> DFT::imag()
+{
+    std::vector<float> res( M );
+
+    for ( size_t i = 0; i < M; ++i )
+        res[ i ] = out_[ i ].imag();
+    return res;
+}
 int main()
 {
     uint32_t M, N, fs, freq;
-    fs   = 10e3;
-    freq = 1e3;
-    N    = 250;
+    fs = 8e3;
+    N  = 8;
 
-    SignalGenerator<> sin_1k;
+    SignalGenerator<> sin_1k( 1e3, N, fs );
     auto sig1 = sin_1k.sin();
 
-    SignalGenerator<> sin_2k( 2e3 );
+    SignalGenerator<> sin_2k( 2e3, N, fs );
+    // sin_2k.change_phase( M_PI / 2 );
     auto sig2 = sin_2k.sin();
 
     auto sig = sin_1k + sin_2k;
@@ -118,7 +146,7 @@ int main()
     DFT dft( N, fs );
     dft.load( sig );
 
-    auto out    = dft.exec().mag();
+    auto out    = dft.exec().phase();
     auto f_axis = dft.get_freq_axis();
 
     plt::stem( f_axis, out );
