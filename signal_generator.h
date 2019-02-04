@@ -49,6 +49,17 @@ const std::vector<float> operator+( const std::vector<float>& sgl,
     return res;
 }
 
+const std::vector<float> operator+( const float& dc,
+                                    const std::vector<float>& sgr )
+{
+    std::vector<float> res( sgr.size() );
+    for ( size_t i = 0; i < sgr.size(); i++ )
+        {
+            res[ i ] = dc + sgr[ i ];
+        }
+    return res;
+}
+
 const std::vector<float> operator*( const std::vector<float>& sgl,
                                     const std::vector<float>& sgr )
 {

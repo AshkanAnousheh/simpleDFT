@@ -116,9 +116,9 @@ std::vector<float> DFT::phase()
             if ( std::abs( out_[ i ].real() ) <= 0.01f )
                 {
                     if ( out_[ i ].imag() > 0.0f )
-                        res[ i ] = 90;
+                        res[ i ] = 90.0;
                     else
-                        res[ i ] = -90;
+                        res[ i ] = -90.0;
                     continue;
                 }
             res[ i ]
@@ -163,7 +163,7 @@ int main()
     DFT dft( N, fs );
     dft.load( sig );
 
-    auto out    = dft.exec().phase();
+    auto out    = dft.exec().imag();
     auto f_axis = dft.get_freq_axis();
 
     // plt::stem( sig );
