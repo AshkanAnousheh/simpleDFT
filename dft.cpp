@@ -105,9 +105,26 @@ std::vector<float> DFT::mag()
 std::vector<float> DFT::phase()
 {
     std::vector<float> res( M );
-
+    float angle = 0.0f;
     for ( size_t i = 0; i < M; ++i )
-        res[ i ] = std::arg( out_[ i ] ) * 180 / M_PI;
+        {
+            if ( std::abs( out_[ i ].imag() ) <= 0.01f )
+                {
+                    res[ i ] = 0.0f;
+                    continue;
+                }
+            if ( std::abs( out_[ i ].real() ) <= 0.01f )
+                {
+                    if ( out_[ i ].imag() > 0.0f )
+                        res[ i ] = 90;
+                    else
+                        res[ i ] = -90;
+                    continue;
+                }
+            res[ i ]
+                = std::atan( out_[ i ].imag() / out_[ i ].real() )
+                * 180 / M_PI;
+        }
     return res;
 }
 
@@ -134,14 +151,14 @@ int main()
     fs = 8e3;
     N  = 8;
 
-    SignalGenerator<> sin_1k( 1e3, N, fs );
+    SignalGenerator<float> sin_1k( 1.0, 1e3, N, fs );
     auto sig1 = sin_1k.sin();
 
-    SignalGenerator<> sin_2k( 2e3, N, fs );
-    // sin_2k.change_phase( M_PI / 2 );
+    SignalGenerator<float> sin_2k( 1.0, 2e3, N, fs );
+    sin_2k.change_phase_to( 3 * M_PI / 4 );
     auto sig2 = sin_2k.sin();
 
-    auto sig = sin_1k + sin_2k;
+    auto sig = sig1 + ( ( 0.5 ) * sig2 );
 
     DFT dft( N, fs );
     dft.load( sig );
@@ -149,6 +166,7 @@ int main()
     auto out    = dft.exec().phase();
     auto f_axis = dft.get_freq_axis();
 
+    // plt::stem( sig );
     plt::stem( f_axis, out );
     plt::grid( true );
     plt::show();
